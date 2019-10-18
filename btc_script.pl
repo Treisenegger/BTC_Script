@@ -4,6 +4,7 @@ primitive_action(op_hash160).
 primitive_action(op_equalverify).
 primitive_action(op_checksig).
 primitive_action(op_pick).
+primitive_action(op_if).
 
 poss(op_push(E), S).
 poss(op_dup, S) :- holds(stack(E, 0), S).
@@ -11,7 +12,9 @@ poss(op_hash160, S) :- holds(stack(E, 0), S), holds(stack(E1, P), S), P1 is P + 
 poss(op_equalverify, S) :- holds(stack(E1, 0), S), holds(stack(E2, 1), S).
 poss(op_checksig, S) :- holds(stack(E1, 0), S), holds(stack(E2, 1), S).
 poss(op_pick, S) :- holds(stack(E, 0), S), holds(stack(E1, P), S), P1 is P + 1, not(holds(stack(E2, P1), S)), integer(E1), E1 >= 0, P > E1.
+poss(op_if, S) :- holds(stack(E, 0), S).
 
+/* Element, position */
 holds(stack(E, P), do(A, S)) :- A = op_push(E), P = 0, not(holds(stack(E1, P), S)) ;
     A = op_push(E), holds(stack(E2, P1), S), P is P1 + 1, not(holds(stack(E1, P), S)) ;
     A = op_dup, holds(stack(E, P1), S), P is P1 + 1, not(holds(stack(E1, P), S)) ;
@@ -28,6 +31,15 @@ holds(stack(E, P), do(A, S)) :- A = op_push(E), P = 0, not(holds(stack(E1, P), S
 
 holds(error, do(A, S)) :- A = op_equalverify, holds(stack(E1, P), S), P1 is P + 1, P2 is P1 + 1, holds(stack(E2, P1), S), not(holds(stack(E3, P2), S)), not(E1 = E2) ;
     holds(error, S).
+
+/* Depth (from bottom to top, essentially position), condition evaluation, current status */
+holds(if_stack(D, CE, CS), do(A, S)) :- A = op_if, D = 0, CS = 1, not(holds(if_stack(D, CE1, CS1), S)), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(E1, P1), S)), E \= 0, CE = 1 ;
+    A = op_if, D = 0, CS = 1, not(holds(if_stack(D, CE1, CS1), S)), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(E1, P1), S)), E = 0, CE = 0 ;
+    A = op_if, CS = 1, holds(if_stack(D1, CE1, CS1), S), D is D1 + 1, not(holds(if_stack(D, CE2, CS2), S)), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(E1, P1), S)), E \= 0, CE = 1 ;
+    A = op_if, CS = 1, holds(if_stack(D1, CE1, CS1), S), D is D1 + 1, not(holds(if_stack(D, CE2, CS2), S)), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(E1, P1), S)), E = 0, CE = 0 ;
+    holds(if_stack(D, CE, CS), S).
+
+holds(if_error, S) :- holds(if_stack(0, CE, CS), S).
 
 hash160(pub_key_hash_A, pub_key_A).
 sig(signature_A, pub_key_A).
