@@ -5,6 +5,7 @@ primitive_action(op_equalverify).
 primitive_action(op_checksig).
 primitive_action(op_pick).
 primitive_action(op_if).
+primitive_action(op_else).
 primitive_action(op_endif).
 
 poss(op_push(E), S).
@@ -26,6 +27,7 @@ poss(op_pick, S) :- holds(stack(E, 0), S), holds(stack(E1, P), S), P1 is P + 1, 
 poss(op_if, S) :- holds(stack(E, 0), S) ;
     holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
     holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
+poss(op_else, S) :- holds(if_valid(0, V), S).
 poss(op_endif, S) :- holds(if_valid(0, V), S).
 
 /* Element, position */
@@ -63,8 +65,13 @@ holds(if_stack(D, CS), do(A, S)) :- A = op_if, D = 0, not(holds(if_stack(D, CS1)
         E \= 0, CS = 1 ;
         E = 0, CS = 0
     ) ;
+    A = op_else, holds(if_valid(D, V), S), D1 is D + 1, not(holds(if_valid(D1, V1), S)), holds(if_stack(D, CS1), S), (
+        CS = 1, CS1 = 0 ;
+        CS = 0, CS1 = 1
+    ) ;
     holds(if_stack(D, CS), S), not((
-        A = op_endif, D1 is D + 1, not(holds(if_valid(D1, V), S))
+        A = op_endif, D1 is D + 1, not(holds(if_valid(D1, V), S)) ;
+        A = op_else, D1 is D + 1, not(holds(if_valid(D1, V), S))
     )).
 
 /* Depth (from bottom to top, essentially position), valid */
