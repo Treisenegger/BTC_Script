@@ -56,7 +56,7 @@ holds(error, do(A, S)) :- ((not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V
     A = op_equalverify, holds(stack(E1, P), S), P1 is P + 1, P2 is P1 + 1, holds(stack(E2, P1), S), not(holds(stack(E3, P2), S)), E1 \= E2) ;
     holds(error, S).
 
-/* Depth (from bottom to top, essentially position), condition evaluation, current status */
+/* Depth (from bottom to top, essentially position), current status */
 holds(if_stack(D, CS), do(A, S)) :- A = op_if, D = 0, not(holds(if_stack(D, CS1), S)), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(E1, P1), S)), (
         E \= 0, CS = 1 ;
         E = 0, CS = 0
