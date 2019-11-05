@@ -10,6 +10,7 @@ primitive_action(op_endif).
 primitive_action(op_toaltstack).
 primitive_action(op_fromaltstack).
 primitive_action(op_depth).
+primitive_action(op_drop).
 
 poss(op_push(E), S).
 poss(op_dup, S) :- holds(stack(E, 0), S) ;
@@ -39,6 +40,9 @@ poss(op_fromaltstack, S) :- holds(altstack(E, 0), S) ;
     holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
     holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
 poss(op_depth, S).
+poss(op_drop, S) :- holds(stack(E, 0), S) ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
 
 /* Element, position */
 holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 1), (
@@ -63,7 +67,8 @@ holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(
             A = op_checksig, P1 is P + 2, not(holds(stack(E1, P1), S)) ;
             A = op_pick, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
             A = op_if, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
-            A = op_toaltstack, P1 is P + 1, not(holds(stack(E1, P1), S))
+            A = op_toaltstack, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
+            A = op_drop, P1 is P + 1, not(holds(stack(E1, P1), S))
         ))
     ) ;
     ((
