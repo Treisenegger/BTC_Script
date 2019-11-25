@@ -11,6 +11,7 @@ primitive_action(op_toaltstack).
 primitive_action(op_fromaltstack).
 primitive_action(op_depth).
 primitive_action(op_drop).
+primitive_action(op_roll).
 
 poss(op_push(E), S).
 poss(op_dup, S) :- holds(stack(E, 0), S) ;
@@ -43,6 +44,9 @@ poss(op_depth, S).
 poss(op_drop, S) :- holds(stack(E, 0), S) ;
     holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
     holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
+poss(op_roll, S) :- holds(stack(E, 0), S), holds(stack(E1, P), S), P1 is P + 1, not(holds(stack(E2, P1), S)), integer(E1), E1 >= 0, P > E1 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
 
 /* Element, position */
 holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 1), (
@@ -61,6 +65,10 @@ holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(
             P = 0, not(holds(stack(E1, P), S)) ;
             holds(stack(E2, P2), S), P is P2 + 1, not(holds(stack(E1, P), S))
         ) ;
+        A = op_roll, holds(stack(E1, P1), S), P2 is P1 + 1, not(holds(stack(E2, P2), S)), (
+            P is P1 - 1, P3 is P - E1, holds(stack(E, P3), S) ;
+            holds(stack(E, P3), S), P is P3 - 1, Pmin is P1 - E1, Pmax is P1 - 1, P3 >= Pmin, Pmax >= P3
+        ) ;
         holds(stack(E, P), S), not((
             A = op_hash160, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
             A = op_equalverify, P1 is P + 2, not(holds(stack(E1, P1), S)) ;
@@ -68,7 +76,8 @@ holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(
             A = op_pick, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
             A = op_if, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
             A = op_toaltstack, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
-            A = op_drop, P1 is P + 1, not(holds(stack(E1, P1), S))
+            A = op_drop, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
+            A = op_roll, holds(stack(E1, P1), S), P2 is P1 + 1, not(holds(stack(E2, P2), S)), P3 is P + E1 + 2, P3 > P1
         ))
     ) ;
     ((
