@@ -7,6 +7,11 @@ primitive_action(op_pick).
 primitive_action(op_if).
 primitive_action(op_else).
 primitive_action(op_endif).
+primitive_action(op_toaltstack).
+primitive_action(op_fromaltstack).
+primitive_action(op_depth).
+primitive_action(op_drop).
+primitive_action(op_roll).
 
 poss(op_push(E), S).
 poss(op_dup, S) :- holds(stack(E, 0), S) ;
@@ -29,6 +34,19 @@ poss(op_if, S) :- holds(stack(E, 0), S) ;
     holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
 poss(op_else, S) :- holds(if_valid(0, V), S).
 poss(op_endif, S) :- holds(if_valid(0, V), S).
+poss(op_toaltstack, S) :- holds(stack(E, 0), S) ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
+poss(op_fromaltstack, S) :- holds(altstack(E, 0), S) ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
+poss(op_depth, S).
+poss(op_drop, S) :- holds(stack(E, 0), S) ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
+poss(op_roll, S) :- holds(stack(E, 0), S), holds(stack(E1, P), S), P1 is P + 1, not(holds(stack(E2, P1), S)), integer(E1), E1 >= 0, P > E1 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
+    holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0.
 
 /* Element, position */
 holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 1), (
@@ -39,12 +57,27 @@ holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(
         A = op_checksig, holds(stack(E1, P), S), P1 is P + 1, P2 is P1 + 1, holds(stack(E2, P1), S), not(holds(stack(E3, P2), S)), sig(E1, E2), E = 1 ;
         A = op_checksig, holds(stack(E1, P), S), P1 is P + 1, P2 is P1 + 1, holds(stack(E2, P1), S), not(holds(stack(E3, P2), S)), not(sig(E1, E2)), E = 0 ;
         A = op_pick, holds(stack(E1, P), S), P1 is P + 1, not(holds(stack(E2, P1), S)), P2 is P - 1 - E1, holds(stack(E, P2), S) ;
+        A = op_fromaltstack, holds(altstack(E, P1), S), P2 is P1 + 1, not(holds(altstack(E1, P2), S)), (
+            P = 0, not(holds(stack(E2, P), S)) ;
+            holds(stack(E3, P3), S), P is P3 + 1, not(holds(stack(E4, P), S))
+        ) ;
+        A = op_depth, E = P, (
+            P = 0, not(holds(stack(E1, P), S)) ;
+            holds(stack(E2, P2), S), P is P2 + 1, not(holds(stack(E1, P), S))
+        ) ;
+        A = op_roll, holds(stack(E1, P1), S), P2 is P1 + 1, not(holds(stack(E2, P2), S)), (
+            P is P1 - 1, P3 is P - E1, holds(stack(E, P3), S) ;
+            holds(stack(E, P3), S), P is P3 - 1, Pmin is P1 - E1, Pmax is P1 - 1, P3 >= Pmin, Pmax >= P3
+        ) ;
         holds(stack(E, P), S), not((
             A = op_hash160, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
             A = op_equalverify, P1 is P + 2, not(holds(stack(E1, P1), S)) ;
             A = op_checksig, P1 is P + 2, not(holds(stack(E1, P1), S)) ;
             A = op_pick, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
-            A = op_if, P1 is P + 1, not(holds(stack(E1, P1), S))
+            A = op_if, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
+            A = op_toaltstack, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
+            A = op_drop, P1 is P + 1, not(holds(stack(E1, P1), S)) ;
+            A = op_roll, holds(stack(E1, P1), S), P2 is P1 + 1, not(holds(stack(E2, P2), S)), P3 is P + E1 + 2, P3 > P1
         ))
     ) ;
     ((
@@ -85,6 +118,20 @@ holds(if_valid(VD, V), do(A, S)) :- A = op_if, VD = 0, V = 1, not(holds(if_valid
     )).
 
 holds(if_error, S) :- holds(if_stack(0, CS), S).
+
+holds(altstack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 1), (
+        A = op_toaltstack, holds(stack(E, P1), S), P2 is P1 + 1, not(holds(stack(E1, P2), S)), (
+            P = 0, not(holds(altstack(E2, P), S)) ;
+            holds(altstack(E3, P3), S), P is P3 + 1, not(holds(altstack(E4, P), S))
+        ) ;
+        holds(altstack(E, P), S), not((
+            A = op_fromaltstack, P1 is P + 1, not(holds(altstack(E1, P1), S))
+        ))
+    ) ;
+    ((
+        holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
+        holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0
+    ), holds(altstack(E, P), S)).
 
 hash160(pub_key_hash_A, pub_key_A).
 sig(signature_A, pub_key_A).
