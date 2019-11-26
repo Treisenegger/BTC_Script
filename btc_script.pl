@@ -87,8 +87,9 @@ holds(stack(E, P), do(A, S)) :- (not(holds(if_valid(0, _), S)) ; holds(if_valid(
         holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S)
     ), holds(stack(E, P), S)).
 
-holds(error, do(A, S)) :- ((not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 1),
-    A = op_equalverify, holds(stack(E1, P), S), P1 is P + 1, P2 is P1 + 1, holds(stack(E2, P1), S), not(holds(stack(E3, P2), S)), E1 \= E2) ;
+holds(error, do(A, S)) :- (not(holds(if_valid(0, _), S)) ; holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 1), S)), (
+        A = op_equalverify, holds(stack(E1, P), S), P1 is P + 1, holds(stack(E2, P1), S), P2 is P1 + 1, not(holds(stack(_, P2), S)), E1 \= E2
+    ) ;
     holds(error, S).
 
 /* Depth (from bottom to top, essentially position), current status */
