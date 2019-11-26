@@ -93,34 +93,34 @@ holds(error, do(A, S)) :- (not(holds(if_valid(0, _), S)) ; holds(if_valid(VD, 1)
     holds(error, S).
 
 /* Depth (from bottom to top, essentially position), current status */
-holds(if_stack(D, CS), do(A, S)) :- A = op_if, D = 0, not(holds(if_stack(D, CS1), S)), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(E1, P1), S)), (
+holds(if_stack(D, CS), do(A, S)) :- A = op_if, D = 0, not(holds(if_stack(D, _), S)), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(_, P1), S)), (
         E \= 0, CS = 1 ;
         E = 0, CS = 0
     ) ;
-    A = op_if, V = 1, holds(if_valid(VD, V), S), D is VD + 1, not(holds(if_valid(D, V1), S)), CS1 = 1, holds(if_stack(VD, CS1), S), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(E1, P1), S)), (
+    A = op_if, holds(if_valid(VD, 1), S), D is VD + 1, not(holds(if_valid(D, _), S)), holds(if_stack(VD, 1), S), holds(stack(E, P), S), P1 is P + 1, not(holds(stack(_, P1), S)), (
         E \= 0, CS = 1 ;
         E = 0, CS = 0
     ) ;
-    A = op_else, holds(if_valid(D, V), S), D1 is D + 1, not(holds(if_valid(D1, V1), S)), holds(if_stack(D, CS1), S), (
+    A = op_else, holds(if_valid(D, V), S), D1 is D + 1, not(holds(if_valid(D1, _), S)), holds(if_stack(D, CS1), S), (
         CS = 1, CS1 = 0 ;
         CS = 0, CS1 = 1
     ) ;
     holds(if_stack(D, CS), S), not((
-        A = op_endif, D1 is D + 1, not(holds(if_valid(D1, V), S)) ;
-        A = op_else, D1 is D + 1, not(holds(if_valid(D1, V), S))
+        A = op_endif, D1 is D + 1, not(holds(if_valid(D1, _), S)) ;
+        A = op_else, D1 is D + 1, not(holds(if_valid(D1, _), S))
     )).
 
 /* Depth (from bottom to top, essentially position), valid */
-holds(if_valid(VD, V), do(A, S)) :- A = op_if, VD = 0, V = 1, not(holds(if_valid(VD, V1), S)) ;
-    A = op_if, holds(if_valid(VD1, V1), S), VD is VD1 + 1, not(holds(if_valid(VD, V2), S)), (
-        V = 0, (V1 = 0 ; CS = 0, holds(if_stack(VD1, CS), S)) ;
-        V = 1, V1 = 1, CS = 1, holds(if_stack(VD1, CS), S)
+holds(if_valid(VD, V), do(A, S)) :- A = op_if, VD = 0, V = 1, not(holds(if_valid(VD, _), S)) ;
+    A = op_if, holds(if_valid(VD1, V1), S), VD is VD1 + 1, not(holds(if_valid(VD, _), S)), (
+        V = 0, (V1 = 0 ; holds(if_stack(VD1, 0), S)) ;
+        V = 1, V1 = 1, holds(if_stack(VD1, 1), S)
     ) ;
     holds(if_valid(VD, V), S), not((
-        A = op_endif, VD1 is VD + 1, not(holds(if_valid(VD1, V1), S))
+        A = op_endif, VD1 is VD + 1, not(holds(if_valid(VD1, _), S))
     )).
 
-holds(if_error, S) :- holds(if_stack(0, CS), S).
+holds(if_error, S) :- holds(if_stack(0, _), S).
 
 holds(altstack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 1), (
         A = op_toaltstack, holds(stack(E, P1), S), P2 is P1 + 1, not(holds(stack(E1, P2), S)), (
