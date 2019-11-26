@@ -101,7 +101,7 @@ holds(if_stack(D, CS), do(A, S)) :- A = op_if, D = 0, not(holds(if_stack(D, _), 
         E \= 0, CS = 1 ;
         E = 0, CS = 0
     ) ;
-    A = op_else, holds(if_valid(D, V), S), D1 is D + 1, not(holds(if_valid(D1, _), S)), holds(if_stack(D, CS1), S), (
+    A = op_else, holds(if_valid(D, _), S), D1 is D + 1, not(holds(if_valid(D1, _), S)), holds(if_stack(D, CS1), S), (
         CS = 1, CS1 = 0 ;
         CS = 0, CS1 = 1
     ) ;
@@ -122,18 +122,18 @@ holds(if_valid(VD, V), do(A, S)) :- A = op_if, VD = 0, V = 1, not(holds(if_valid
 
 holds(if_error, S) :- holds(if_stack(0, _), S).
 
-holds(altstack(E, P), do(A, S)) :- (not(holds(if_valid(0, V), S)) ; holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 1), (
-        A = op_toaltstack, holds(stack(E, P1), S), P2 is P1 + 1, not(holds(stack(E1, P2), S)), (
-            P = 0, not(holds(altstack(E2, P), S)) ;
-            holds(altstack(E3, P3), S), P is P3 + 1, not(holds(altstack(E4, P), S))
+holds(altstack(E, P), do(A, S)) :- (not(holds(if_valid(0, _), S)) ; holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 1), S)), (
+        A = op_toaltstack, holds(stack(E, P1), S), P2 is P1 + 1, not(holds(stack(_, P2), S)), (
+            P = 0, not(holds(altstack(_, P), S)) ;
+            holds(altstack(_, P3), S), P is P3 + 1, not(holds(altstack(_, P), S))
         ) ;
         holds(altstack(E, P), S), not((
-            A = op_fromaltstack, P1 is P + 1, not(holds(altstack(E1, P1), S))
+            A = op_fromaltstack, P1 is P + 1, not(holds(altstack(_, P1), S))
         ))
     ) ;
     ((
-        holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 0 ;
-        holds(if_valid(VD, V), S), VD1 is VD + 1, not(holds(if_valid(VD1, V1), S)), V = 1, holds(if_stack(VD, CS), S), CS = 0
+        holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
+        holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, CS), S), CS = 0
     ), holds(altstack(E, P), S)).
 
 hash160(pub_key_hash_A, pub_key_A).
