@@ -12,6 +12,7 @@ primitive_action(op_fromaltstack).
 primitive_action(op_depth).
 primitive_action(op_drop).
 primitive_action(op_roll).
+primitive_action(op_checkmultisig).
 
 poss(op_push(_), _).
 poss(op_dup, S) :- holds(stack(0, _), S) ;
@@ -26,7 +27,7 @@ poss(op_equalverify, S) :- holds(stack(0, _), S), holds(stack(1, _), S) ;
 poss(op_checksig, S) :- holds(stack(0, _), S), holds(stack(1, _), S) ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
-poss(op_pick, S) :- holds(stack(0, _), S), holds(stack(P, E1), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E1), E1 >= 0, P > E1 ;
+poss(op_pick, S) :- holds(stack(0, _), S), holds(stack(P, E), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E), E >= 0, P > E ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
 poss(op_if, S) :- holds(stack(0, _), S) ;
@@ -44,7 +45,10 @@ poss(op_depth, _).
 poss(op_drop, S) :- holds(stack(0, _), S) ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
-poss(op_roll, S) :- holds(stack(0, _), S), holds(stack(P, E1), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E1), E1 >= 0, P > E1 ;
+poss(op_roll, S) :- holds(stack(0, _), S), holds(stack(P, E), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E), E >= 0, P > E ;
+    holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
+    holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
+poss(op_checkmultisig, S) :- holds(stack(0, _), S), holds(stack(P, E), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E), E >= 0, P > E, P2 is P - E - 1, holds(stack(P2, E1), S), integer(E1), E1 >= 0, P2 > E1 - 1, E >= E1 ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
 
