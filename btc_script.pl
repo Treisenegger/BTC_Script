@@ -12,6 +12,7 @@ primitive_action(op_fromaltstack).
 primitive_action(op_depth).
 primitive_action(op_drop).
 primitive_action(op_roll).
+primitive_action(op_checkmultisig).
 
 poss(op_push(_), _).
 poss(op_dup, S) :- holds(stack(0, _), S) ;
@@ -26,7 +27,7 @@ poss(op_equalverify, S) :- holds(stack(0, _), S), holds(stack(1, _), S) ;
 poss(op_checksig, S) :- holds(stack(0, _), S), holds(stack(1, _), S) ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
-poss(op_pick, S) :- holds(stack(0, _), S), holds(stack(P, E1), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E1), E1 >= 0, P > E1 ;
+poss(op_pick, S) :- holds(stack(0, _), S), holds(stack(P, E), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E), E >= 0, P > E ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
 poss(op_if, S) :- holds(stack(0, _), S) ;
@@ -44,7 +45,10 @@ poss(op_depth, _).
 poss(op_drop, S) :- holds(stack(0, _), S) ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
-poss(op_roll, S) :- holds(stack(0, _), S), holds(stack(P, E1), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E1), E1 >= 0, P > E1 ;
+poss(op_roll, S) :- holds(stack(0, _), S), holds(stack(P, E), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E), E >= 0, P > E ;
+    holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
+    holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
+poss(op_checkmultisig, S) :- holds(stack(0, _), S), holds(stack(P, E), S), P1 is P + 1, not(holds(stack(P1, _), S)), integer(E), E >= 0, P > E, P2 is P - E - 1, holds(stack(P2, E1), S), integer(E1), E1 >= 0, P2 > E1 - 1, E >= E1 ;
     holds(if_valid(VD, 0), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)) ;
     holds(if_valid(VD, 1), S), VD1 is VD + 1, not(holds(if_valid(VD1, _), S)), holds(if_stack(VD, 0), S).
 
@@ -71,6 +75,20 @@ holds(stack(P, E), do(A, S)) :- (not(holds(if_valid(0, _), S)) ; holds(if_valid(
             P is P1 - 1, P3 is P - E1, holds(stack(P3, E), S) ;
             holds(stack(P3, E), S), P is P3 - 1, Pmin is P1 - E1, Pmax is P1 - 1, P3 >= Pmin, Pmax >= P3
         ) ;
+        A = op_checkmultisig, holds(stack(Pkeys, Nkeys), S), P1 is Pkeys + 1, not(holds(stack(P1, _), S)), Psigs is Pkeys - Nkeys - 1, holds(stack(Psigs, Nsigs), S), P is Psigs - Nsigs, (
+            E = 1, not(( holds(stack(Psig, Sig), S), Psigs > Psig, Psig >= P, not((
+                holds(stack(Pkey, Key), S), Pkeys > Pkey, Pkey > Psigs, sig(Sig, Key)
+                )) )),
+                not(( holds(stack(Psig1, Sig1), S), Psigs > Psig1, Psig1 >= P, holds(stack(Psig2, Sig2), S), Psigs > Psig2, Psig2 >= P, Psig2 > Psig1, not((
+                    holds(stack(Pkey1, Key1), S), Pkeys > Pkey1, Pkey1 > Psigs, sig(Sig1, Key1), holds(stack(Pkey2, Key2), S), Pkeys > Pkey2, Pkey2 > Psigs, sig(Sig2, Key2), Pkey2 > Pkey1
+                )) )) ;
+            E = 0, ((holds(stack(Psig, Sig), S), Psigs > Psig, Psig >= P, not((
+                holds(stack(Pkey, Key), S), Pkeys > Pkey, Pkey > Psigs, sig(Sig, Key)
+                ))) ;
+                (holds(stack(Psig1, Sig1), S), Psigs > Psig1, Psig1 >= P, holds(stack(Psig2, Sig2), S), Psigs > Psig2, Psig2 >= P, Psig2 > Psig1, not((
+                    holds(stack(Pkey1, Key1), S), Pkeys > Pkey1, Pkey1 > Psigs, sig(Sig1, Key1), holds(stack(Pkey2, Key2), S), Pkeys > Pkey2, Pkey2 > Psigs, sig(Sig2, Key2), Pkey2 > Pkey1
+                ))))
+        ) ;
         holds(stack(P, E), S), not((
             A = op_hash160, P1 is P + 1, not(holds(stack(P1, _), S)) ;
             A = op_equalverify, P1 is P + 2, not(holds(stack(P1, _), S)) ;
@@ -79,7 +97,8 @@ holds(stack(P, E), do(A, S)) :- (not(holds(if_valid(0, _), S)) ; holds(if_valid(
             A = op_if, P1 is P + 1, not(holds(stack(P1, _), S)) ;
             A = op_toaltstack, P1 is P + 1, not(holds(stack(P1, _), S)) ;
             A = op_drop, P1 is P + 1, not(holds(stack(P1, _), S)) ;
-            A = op_roll, holds(stack(P1, E1), S), P2 is P1 + 1, not(holds(stack(P2, _), S)), P3 is P + E1 + 2, P3 > P1
+            A = op_roll, holds(stack(P1, E1), S), P2 is P1 + 1, not(holds(stack(P2, _), S)), P3 is P + E1 + 2, P3 > P1 ;
+            A = op_checkmultisig, holds(stack(Pkeys, Nkeys), S), P1 is Pkeys + 1, not(holds(stack(P1, _), S)), Psigs is Pkeys - Nkeys - 1, holds(stack(Psigs, Nsigs), S), P2 is Psigs - Nsigs, P >= P2
         ))
     ) ;
     ((
@@ -138,6 +157,8 @@ holds(altstack(P, E), do(A, S)) :- (not(holds(if_valid(0, _), S)) ; holds(if_val
 
 hash160(pub_key_hash_A, pub_key_A).
 sig(signature_A, pub_key_A).
+sig(signature_B, pub_key_B).
+sig(signature_C, pub_key_C).
 
 /* PAY TO PUBKEY HASH VALIDO */
 /* holds(stack(E, 0), do(op_checksig, do(op_equalverify, do(op_push(pub_key_hash_A), do(op_hash160, do(op_dup, do(op_push(pub_key_A), do(op_push(signature_A), s0)))))))). */
