@@ -1,0 +1,13 @@
+Operadores básicos:
+*OP_PUSH
+OP_ADD
+OP_CHECKSIG
+OP_VERIFY
+OP_SWAP
+
+Operadores con hueco:
+OP_ROLL
+OP_PICK
+
+Operadores con lenguaje especial:
+OP_CHECKMULTISIG
